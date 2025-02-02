@@ -1,0 +1,61 @@
+import requests
+import pandas as pd
+import time
+import streamlit as st
+
+# List of exchanges and their API endpoints
+EXCHANGES = {
+    "Luno": "https://api.luno.com/api/1/ticker?pair=XBTZAR",
+    "MEXC_BTC": "https://api.mexc.com/api/v3/ticker/price?symbol=BTCUSDT",
+    "MEXC_XRP": "https://api.mexc.com/api/v3/ticker/price?symbol=XRPUSDT",
+    "CoinEx_BTC": "https://api.coinex.com/v1/market/ticker?market=BTCUSDT",
+    "CoinEx_XRP": "https://api.coinex.com/v1/market/ticker?market=XRPUSDT",
+    "Bybit": "https://api.bybit.com/v2/public/tickers",
+    "KuCoin_BTC": "https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=BTC-USDT",
+    "KuCoin_XRP": "https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=XRP-USDT",
+    "OKX_BTC": "https://www.okx.com/api/v5/market/ticker?instId=BTC-USDT",
+    "OKX_XRP": "https://www.okx.com/api/v5/market/ticker?instId=XRP-USDT",
+    "Binance_BTC": "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT",
+    "Binance_XRP": "https://api.binance.com/api/v3/ticker/price?symbol=XRPUSDT"
+}
+
+def get_price(url, key=None):
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        if key:
+            return float(data.get(key, 0))
+        return float(data.get("price", 0))
+    return None
+
+def fetch_prices():
+    prices = {
+        "Exchange": [],
+        "BTC Price (USD)": [],
+        "XRP Price (USD)": []
+    }
+    
+    for exchange, url in EXCHANGES.items():
+        price = get_price(url)
+        if "BTC" in exchange:
+            prices["Exchange"].append(exchange.replace("_BTC", ""))
+            prices["BTC Price (USD)"].append(price)
+            prices["XRP Price (USD)"].append(None)
+        elif "XRP" in exchange:
+            index = prices["Exchange"].index(exchange.replace("_XRP", ""))
+            prices["XRP Price (USD)"][index] = price
+    
+    return pd.DataFrame(prices)
+
+# Streamlit UI
+def main():
+    st.title("Crypto Arbitrage Tracker")
+    st.write("Live price differences across exchanges")
+    
+    while True:
+        df = fetch_prices()
+        st.write(df)
+        time.sleep(10)  # Refresh every 10 seconds
+
+if __name__ == "__main__":
+    main()
